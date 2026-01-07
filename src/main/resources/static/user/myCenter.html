@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>个人中心 - 在线图书销售系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.4/dist/jquery.min.js"></script>
+    <style>
+        .center-box { max-width: 800px; margin: 50px auto; padding: 40px; border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+        .password-hint { font-size: 0.85em; color: #6c757d; margin-top: 4px; }
+        .error-msg { font-size: 0.85em; color: #dc3545; display: none; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-primary mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="index.html">图书商城</a>
+        <a class="btn btn-outline-light btn-sm" href="index.html">返回首页</a>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="center-box bg-white">
+        <h3 class="mb-4 border-bottom pb-3">个人中心</h3>
+
+        <div id="infoViewMode">
+            <div class="row mb-3">
+                <label class="col-sm-3 fw-bold text-end">用户ID：</label>
+                <div class="col-sm-9" id="viewUserId">-</div>
+            </div>
+            <div class="row mb-3">
+                <label class="col-sm-3 fw-bold text-end">登录账号：</label>
+                <div class="col-sm-9" id="viewLoginName">-</div>
+            </div>
+            <div class="row mb-3">
+                <label class="col-sm-3 fw-bold text-end">手机号码：</label>
+                <div class="col-sm-9" id="viewPhone">-</div>
+            </div>
+            <div class="row mt-4">
+                <div class="col-sm-9 offset-sm-3">
+                    <button class="btn btn-primary px-4" onclick="toEditMode()">修改信息</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="infoEditMode" style="display: none;">
+            <form id="editForm">
+                <input type="hidden" id="editUserId" name="userId">
+
+                <div class="mb-3 row">
+                    <label class="col-sm-3 col-form-label text-end">登录账号</label>
+                    <div class="col-sm-9">
+                        <input type="text" class="form-control" id="editLoginName" disabled>
+                        <div class="form-text">账号不可修改</div>
+                    </div>
+                </div>
+
+                <!-- 新增：原密码验证 -->
+                <div class="mb-3 row">
+                    <label class="col-sm-3 col-form-label text-end">原密码</label>
+                    <div class="col-sm-9">
+                        <input type="password" class="form-control" id="oldPassword" name="oldPassword" placeholder="请输入当前密码进行验证">
+                        <div class="error-msg" id="oldPasswordError"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3 row">
+                    <label class="col-sm-3 col-form-label text-end">新手机号码</label>
+                    <div class="col-sm-9">
+                        <input type="text" class="form-control" id="editPhone" name="phonenumber" placeholder="不修改请留空">
+                        <div class="error-msg" id="phoneError"></div>
+                    </div>
+                </div>
+
+                <!-- 新增：新密码两次输入 -->
+                <div class="mb-3 row">
+                    <label class="col-sm-3 col-form-label text-end">新密码</label>
+                    <div class="col-sm-9">
+                        <input type="password" class="form-control" id="newPassword" name="newPassword" placeholder="不修改请留空">
+                        <div class="password-hint">若需修改密码，请填写此项（需包含字母、数字、特殊字符）</div>
+                        <div class="error-msg" id="newPasswordError"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3 row">
+                    <label class="col-sm-3 col-form-label text-end">确认新密码</label>
+                    <div class="col-sm-9">
+                        <input type="password" class="form-control" id="confirmPassword" placeholder="请再次输入新密码">
+                        <div class="error-msg" id="confirmPasswordError"></div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-sm-9 offset-sm-3">
+                        <button type="button" class="btn btn-success me-2" onclick="saveInfo()" id="saveBtn">保存修改</button>
+                        <button type="button" class="btn btn-secondary" onclick="toViewMode()">取消</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 全局用户信息变量
+    let currentUser = null;
+
+    $(document).ready(function() {
+        // 1. 直接从Session获取，保证绝对能显示，不会提示"用户不存在"
+        const sessionUser = sessionStorage.getItem("USER_INFO");
+        if (!sessionUser) {
+            alert("请先登录");
+            window.location.href = "login.html";
+            return;
+        }
+
+        currentUser = JSON.parse(sessionUser);
+        renderView();
+    });
+
+    // 渲染页面数据
+    function renderView() {
+        // 处理字段名兼容性
+        const uid = currentUser.userId || currentUser.user_id;
+        const name = currentUser.loginName || currentUser.login_name;
+        const phone = currentUser.phonenumber || "";
+
+        $("#viewUserId").text(uid);
+        $("#viewLoginName").text(name);
+        $("#viewPhone").text(phone);
+
+        $("#infoViewMode").show();
+        $("#infoEditMode").hide();
+    }
+
+    // 切换到编辑
+    function toEditMode() {
+        const uid = currentUser.userId || currentUser.user_id;
+        const name = currentUser.loginName || currentUser.login_name;
+
+        $("#editUserId").val(uid);
+        $("#editLoginName").val(name);
+        $("#editPhone").val(currentUser.phonenumber || "");
+        $("#oldPassword").val("");
+        $("#newPassword").val("");
+        $("#confirmPassword").val("");
+
+        // 清空错误信息
+        $(".error-msg").text("").hide();
+
+        $("#infoViewMode").hide();
+        $("#infoEditMode").show();
+    }
+
+    // 取消编辑
+    function toViewMode() {
+        $("#infoEditMode").hide();
+        $("#infoViewMode").show();
+    }
+
+    // 验证表单数据
+    function validateForm() {
+        let isValid = true;
+
+        // 清空之前的错误信息
+        $(".error-msg").text("").hide();
+
+        const oldPwd = $("#oldPassword").val().trim();
+        const newPwd = $("#newPassword").val().trim();
+        const confirmPwd = $("#confirmPassword").val().trim();
+        const phone = $("#editPhone").val().trim();
+
+        // 验证原密码（必填）
+        if (!oldPwd) {
+            $("#oldPasswordError").text("原密码不能为空").show();
+            isValid = false;
+        }
+
+        // 验证手机号格式（可选）
+        if (phone && !/^1[3-9]\d{9}$/.test(phone)) {
+            $("#phoneError").text("请输入正确的手机号格式").show();
+            isValid = false;
+        }
+
+        // 如果填写了新密码，需要验证
+        if (newPwd) {
+            // 验证密码长度
+            if (newPwd.length < 6 || newPwd.length > 16) {
+                $("#newPasswordError").text("密码长度需在6-16位之间").show();
+                isValid = false;
+            }
+
+            // 验证密码格式（字母、数字、特殊字符）
+            const pwdReg = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@#$%^&*])[a-zA-Z\d@#$%^&*]{6,16}$/;
+            if (!pwdReg.test(newPwd)) {
+                $("#newPasswordError").text("密码必须包含字母、数字和特殊字符（@#$%^&*）").show();
+                isValid = false;
+            }
+
+            // 验证两次密码是否一致
+            if (newPwd !== confirmPwd) {
+                $("#confirmPasswordError").text("两次输入的密码不一致").show();
+                isValid = false;
+            }
+        } else if (confirmPwd) {
+            // 如果只填写了确认密码，没填新密码
+            $("#newPasswordError").text("请先填写新密码").show();
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    // 提交修改
+    function saveInfo() {
+        const userId = $("#editUserId").val();
+        const oldPwd = $("#oldPassword").val().trim();
+        const newPwd = $("#newPassword").val().trim();
+        const phone = $("#editPhone").val().trim();
+
+        // 验证表单
+        if (!validateForm()) {
+            return;
+        }
+
+        // 禁用保存按钮，防止重复提交
+        $("#saveBtn").prop("disabled", true).text("保存中...");
+
+        // 构造参数
+        const params = {
+            userId: userId,
+            oldPassword: oldPwd,
+            phonenumber: phone || (currentUser.phonenumber || "") // 保持原有手机号不变
+        };
+
+        // 如果有新密码，加入参数
+        if (newPwd) {
+            params.newPassword = newPwd;
+        }
+
+        // 发送请求
+        $.ajax({
+            url: "/user/updateInfo",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(params),
+            success: function(res) {
+                $("#saveBtn").prop("disabled", false).text("保存修改");
+
+                if (res.code === 200) {
+                    alert("修改成功！");
+
+                    // 更新本地缓存
+                    currentUser.phonenumber = phone || currentUser.phonenumber;
+                    sessionStorage.setItem("USER_INFO", JSON.stringify(currentUser));
+
+                    // 清空表单
+                    $("#oldPassword").val("");
+                    $("#newPassword").val("");
+                    $("#confirmPassword").val("");
+
+                    renderView();
+                } else {
+                    alert("修改失败：" + res.msg);
+                }
+            },
+            error: function(xhr, status, error) {
+                $("#saveBtn").prop("disabled", false).text("保存修改");
+                console.error("修改请求失败:", status, error);
+                alert("请求失败：" + (xhr.responseJSON ? xhr.responseJSON.msg : "请检查网络或后端接口"));
+            }
+        });
+    }
+</script>
+</body>
+</html>

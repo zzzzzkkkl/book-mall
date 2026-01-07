@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>首页 - 在线图书销售系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.4/dist/jquery.min.js"></script>
+    <style>
+        /* 隐藏热销榜 */
+        .hot-list {
+            display: none !important;
+        }
+        body {
+            padding-top: 56px; /* 防止内容被固定导航栏遮挡 */
+        }
+
+        .banner {
+            height: 420px;
+            overflow: hidden;
+            position: relative;
+        }
+        .banner img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .banner .banner-text {
+            position: absolute;
+            top: 50%;
+            left: 10%;
+            transform: translateY(-50%);
+            color: #fff;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        .hot-list {
+            max-width: 1200px;
+            margin: 40px auto;
+        }
+        .hot-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .book-card-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .book-card {
+            width: calc(25% - 15px);
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            transition: box-shadow 0.3s;
+        }
+        .book-card:hover {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        .book-card img {
+            width: 100%;
+            height: 220px;
+            object-fit: contain;
+            margin-bottom: 12px;
+        }
+        .stock-ok {
+            color: #28a745;
+            font-weight: 500;
+        }
+        .stock-no {
+            color: #dc3545;
+            font-weight: 500;
+        }
+        .sale-num {
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+        .all-books-container {
+            margin: 40px auto;
+            max-width: 1200px;
+        }
+        .section-title {
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f0f0f0;
+            color: #333;
+        }
+        .pagination-container {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+        }
+        .search-box-nav {
+            width: 300px;
+            margin-right: 15px;
+        }
+        .navbar-search {
+            display: flex;
+            gap: 5px;
+        }
+        .search-input-group {
+            flex-grow: 1;
+        }
+        .dropdown-menu-wide {
+            min-width: 300px;
+            max-width: 500px;
+            padding: 10px;
+        }
+        .search-result-item {
+            padding: 8px 12px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        .search-result-item:hover {
+            background-color: #f8f9fa;
+        }
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+        .empty-search {
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+        }
+
+        /* 添加滚动阴影效果 */
+        .navbar.fixed-top {
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: box-shadow 0.3s ease;
+        }
+        /* 滚动时加深阴影 */
+        .scrolled .navbar.fixed-top {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
+    <div class="container">
+        <a class="navbar-brand" href="index.html">
+            <i class="bi bi-book-half"></i> 在线图书销售系统
+        </a>
+
+        <div class="d-flex align-items-center search-box-nav">
+            <div class="navbar-search">
+                <div class="input-group search-input-group">
+                    <input type="text" class="form-control" id="searchKeyword"
+                           placeholder="搜索图书名称、作者..."
+                           autocomplete="off">
+                    <button class="btn btn-light" type="button" id="searchBtn">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item"><a class="nav-link active" href="index.html">首页</a></li>
+                <li class="nav-item"><a class="nav-link" href="hotBooks.html">热销榜</a></li>
+                <li class="nav-item"><a class="nav-link" href="myCenter.html">个人中心</a></li>
+            </ul>
+            <div class="navbar-nav" id="userNavArea">
+                <a class="nav-link" href="login.html" id="toLoginBtn">登录</a>
+                <a class="nav-link" href="register.html" id="toRegisterBtn">注册</a>
+
+                <div class="nav-item dropdown" id="userDropdown" style="display: none;">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle"></i> <span id="loginUserName"></span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="myCenter.html">个人中心</a></li>
+                        <li><a class="dropdown-item" href="cart.html"><i class="bi bi-cart"></i> 购物车</a></li>
+                        <li><a class="dropdown-item" href="orderList.html">我的订单</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="javascript:;" id="logoutBtn">退出登录</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="dropdown-menu dropdown-menu-wide shadow" id="searchResultsDropdown" style="display: none; position: absolute; z-index: 1000;">
+    <div id="searchResultsContent"></div>
+</div>
+
+<div class="banner">
+    <img src="https://picsum.photos/id/24/1920/420" alt="图书促销">
+    <div class="banner-text">
+        <h2>开学季促销</h2>
+        <p class="fs-5">全场计算机类图书8折优惠</p>
+    </div>
+</div>
+
+<div class="container all-books-container">
+    <div class="section-title">
+        <h3><i class="bi bi-book"></i> 全部图书 </h3>
+    </div>
+    <div class="book-card-list" id="allBooksContainer">
+        <div class="text-center w-100 py-5">
+            <i class="bi bi-hourglass-split text-muted" style="font-size: 2em;"></i>
+            <p class="mt-2 text-muted">正在加载图书数据...</p>
+        </div>
+    </div>
+
+    <div class="pagination-container" id="paginationContainer">
+        <nav aria-label="Page navigation">
+            <ul class="pagination" id="pagination"></ul>
+        </nav>
+    </div>
+</div>
+
+<div class="hot-list">
+    <div class="hot-title">
+        <h3>
+            <i class="bi bi-fire text-danger"></i> 热销榜TOP10
+        </h3>
+        <a href="hotBooks.html" class="text-primary">查看全部热销图书</a>
+    </div>
+    <div class="book-card-list" id="hotBookContainer">
+        <div class="text-center w-100 py-5">
+            <i class="bi bi-hourglass-split text-muted" style="font-size: 2em;"></i>
+            <p class="mt-2 text-muted">加载热销图书中...</p>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    $(function() {
+        initLoginStatus();
+        loadAllBooks(1);
+        loadHotBooks();
+
+        // 监听滚动，添加阴影类
+        $(window).scroll(function() {
+            if ($(window).scrollTop() > 10) {
+                $('nav').addClass('scrolled');
+            } else {
+                $('nav').removeClass('scrolled');
+            }
+        });
+
+        $("#logoutBtn").click(function() {
+            sessionStorage.removeItem("USER_INFO");
+            location.reload();
+        });
+
+        // --- 核心修改：搜索按钮和回车直接跳转到详情搜索页 ---
+        $("#searchBtn").click(function() {
+            const keyword = $("#searchKeyword").val().trim();
+            if (keyword) {
+                // 直接跳转到结果页，不只是预览
+                window.location.href = `searchResults.html?keyword=${encodeURIComponent(keyword)}`;
+            }
+        });
+
+        $("#searchKeyword").keypress(function(e) {
+            if (e.which === 13) {
+                $("#searchBtn").click();
+            }
+        });
+
+        // 依然保留好用的预览功能
+        let searchTimer;
+        $("#searchKeyword").on('input', function() {
+            clearTimeout(searchTimer);
+            const keyword = $(this).val().trim();
+            if (keyword.length >= 1) {
+                searchTimer = setTimeout(() => {
+                    previewSearchBooks(keyword);
+                    showSearchResults();
+                }, 300);
+            } else {
+                hideSearchResults();
+            }
+        });
+
+        // 点击外部隐藏
+        $(document).click(function(e) {
+            if (!$(e.target).closest('.navbar-search').length &&
+                !$(e.target).closest('#searchResultsDropdown').length) {
+                hideSearchResults();
+            }
+        });
+    });
+
+    // 搜索状态初始化
+    function initLoginStatus() {
+        const userInfo = JSON.parse(sessionStorage.getItem("USER_INFO"));
+        if (userInfo) {
+            $("#toLoginBtn, #toRegisterBtn").hide();
+            $("#userDropdown").show();
+            $("#loginUserName").text(userInfo.login_name || userInfo.loginName);
+        }
+    }
+
+    // 显示搜索结果下拉
+    function showSearchResults() {
+        const $searchInput = $("#searchKeyword");
+        const offset = $searchInput.offset();
+        $("#searchResultsDropdown").css({
+            top: offset.top + $searchInput.outerHeight(),
+            left: offset.left,
+            width: $searchInput.outerWidth(),
+            display: 'block'
+        });
+    }
+
+    function hideSearchResults() {
+        $("#searchResultsDropdown").hide();
+    }
+
+    // 仅用于首页预览的搜索
+    function previewSearchBooks(keyword) {
+        $.ajax({
+            url: "/user/searchBook",
+            type: "GET",
+            data: { keyword: keyword },
+            success: function(res) {
+                const $content = $("#searchResultsContent");
+                if (res.code === 200 && res.data && res.data.length > 0) {
+                    let html = "";
+                    res.data.slice(0, 5).forEach(book => {
+                        // 获取封面URL
+                        const coverUrl = book.cover_url || book.coverUrl;
+                        const coverImgSrc = coverUrl && coverUrl.trim() !== '' ?
+                            coverUrl :
+                            `https://picsum.photos/id/${book.bid || book.bookId}/80/100`;
+
+                        html += `
+                            <div class="search-result-item" onclick="window.location.href='bookDetail.html?bookId=${book.bid || book.bookId}'">
+                                <div class="d-flex align-items-center">
+                                    <img src="${coverImgSrc}" alt="${book.book_name || book.bookName}"
+                                         style="width: 40px; height: 50px; object-fit: contain; margin-right: 10px;">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0">${book.book_name || book.bookName}</h6>
+                                        <small class="text-muted">${book.author}</small>
+                                    </div>
+                                    <span class="text-primary">¥${book.price}</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += `
+                        <div class="text-center p-2 border-top">
+                            <a href="searchResults.html?keyword=${encodeURIComponent(keyword)}" class="text-decoration-none small">
+                                查看全部 ${res.data.length} 条结果 >>
+                            </a>
+                        </div>
+                    `;
+                    $content.html(html);
+                } else {
+                    $content.html('<div class="p-3 text-center text-muted">未找到匹配图书</div>');
+                }
+            }
+        });
+    }
+
+    // 加载全部图书
+    function loadAllBooks(page) {
+        $.get("/user/getAllBooks", { page: page, pageSize: 12 }, function(res) {
+            if (res.code === 200 && res.data && res.data.books) {
+                let html = "";
+                res.data.books.forEach(book => {
+                    const bid = book.bid || book.bookId;
+                    const bname = book.book_name || book.bookName;
+                    const stock = (book.stock_num !== undefined) ? book.stock_num : book.stockNum;
+
+                    // 获取封面URL，如果有则使用，否则使用默认图片
+                    const coverUrl = book.cover_url || book.coverUrl;
+                    const coverImgSrc = coverUrl && coverUrl.trim() !== '' ?
+                        coverUrl :
+                        `https://picsum.photos/id/${bid % 100}/200/220`;
+
+                    let stockHtml = stock <= 0 ? `<p class="stock-no mb-1">库存：无货</p>` : `<p class="stock-ok mb-1">库存：${stock}本</p>`;
+                    if(stock === -1) stockHtml = `<p class="stock-no mb-1">库存：已下架</p>`;
+
+                    html += `
+                        <div class="book-card">
+                            <img src="${coverImgSrc}" alt="${bname}">
+                            <h5 class="mb-2 text-truncate" title="${bname}">${bname}</h5>
+                            <p class="mb-1 text-muted">作者：${book.author}</p>
+                            <p class="mb-1 text-primary fw-bold">¥${book.price}</p>
+                            ${stockHtml}
+                            <p class="sale-num">销量：${book.sale_num || 0}本</p>
+                            <a href="bookDetail.html?bookId=${bid}" class="btn btn-sm btn-outline-primary mt-2">查看详情</a>
+                        </div>
+                    `;
+                });
+                $("#allBooksContainer").html(html);
+                generatePagination(page, Math.ceil(res.data.total / 12));
+            }
+        });
+    }
+
+    function generatePagination(current, total) {
+        if (total <= 1) { $("#paginationContainer").hide(); return; }
+        $("#paginationContainer").show();
+        let html = "";
+        if (current > 1) html += `<li class="page-item"><a class="page-link" href="javascript:;" onclick="loadAllBooks(${current-1})">上一页</a></li>`;
+        for (let i = 1; i <= total; i++) {
+            html += `<li class="page-item ${i === current ? 'active' : ''}"><a class="page-link" href="javascript:;" onclick="loadAllBooks(${i})">${i}</a></li>`;
+        }
+        if (current < total) html += `<li class="page-item"><a class="page-link" href="javascript:;" onclick="loadAllBooks(${current+1})">下一页</a></li>`;
+        $("#pagination").html(html);
+    }
+
+    // 加载热销榜
+    function loadHotBooks() {
+        $.get("/user/getHotBooks", function(res) {
+            if (res.code === 200 && res.data) {
+                let html = "";
+                res.data.slice(0, 10).forEach(book => {
+                    const bid = book.bid || book.bookId;
+
+                    // 获取封面URL，如果有则使用，否则使用默认图片
+                    const coverUrl = book.cover_url || book.coverUrl;
+                    const coverImgSrc = coverUrl && coverUrl.trim() !== '' ?
+                        coverUrl :
+                        `https://picsum.photos/id/${bid % 100}/200/220`;
+
+                    html += `
+                        <div class="book-card">
+                            <img src="${coverImgSrc}" alt="${book.book_name}">
+                            <h5 class="mb-2 text-truncate">${book.book_name || book.bookName}</h5>
+                            <p class="mb-1 text-primary fw-bold">¥${book.price}</p>
+                            <p class="sale-num">热卖 ${book.sale_num || 0} 本</p>
+                            <a href="bookDetail.html?bookId=${bid}" class="btn btn-sm btn-outline-danger mt-2">立即抢购</a>
+                        </div>
+                    `;
+                });
+                $("#hotBookContainer").html(html);
+            }
+        });
+    }
+</script>
+</body>
+</html>

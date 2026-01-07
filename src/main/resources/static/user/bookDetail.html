@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>图书详情 - 在线图书销售系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.4/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        .book-detail-container {
+            margin-top: 30px;
+        }
+        .book-cover {
+            max-width: 300px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        .book-info {
+            padding-left: 30px;
+        }
+        .book-price {
+            font-size: 24px;
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .buy-controls {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .num-controls {
+            display: flex;
+            align-items: center;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .num-btn {
+            width: 30px;
+            height: 30px;
+            border: none;
+            background-color: #f8f9fa;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .num-btn:hover {
+            background-color: #e9ecef;
+        }
+        .num-input {
+            width: 50px;
+            height: 30px;
+            text-align: center;
+            border: none;
+            border-left: 1px solid #ddd;
+            border-right: 1px solid #ddd;
+        }
+        .stock-status {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .stock-in {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .stock-out {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .stock-off {
+            background-color: #e2e3e5;
+            color: #383d41;
+        }
+        .book-info-item {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+        }
+        .book-info-item i {
+            width: 24px;
+            margin-right: 8px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+        <a class="navbar-brand" href="index.html">
+            <i class="bi bi-book-half"></i> 在线图书销售系统
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="index.html">首页</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="javascript:;">图书详情</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="orderList.html">我的订单</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="cart.html">购物车</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="myCenter.html">个人中心</a>
+                </li>
+            </ul>
+            <ul class="navbar-nav" id="userMenu">
+                <li class="nav-item" id="notLoginMenu">
+                    <a class="nav-link" href="login.html">登录</a>
+                </li>
+                <li class="nav-item" id="notLoginMenu2">
+                    <a class="nav-link" href="register.html">注册</a>
+                </li>
+                <li class="nav-item dropdown" id="loginMenu" style="display: none;">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle"></i>
+                        <span id="loginUserName"></span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="myCenter.html">个人中心</a></li>
+                        <li><a class="dropdown-item" href="orderList.html">我的订单</a></li>
+                        <li><a class="dropdown-item" href="cart.html"><i class="bi bi-cart"></i> 购物车</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="javascript:;" id="logoutBtn">退出登录</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container book-detail-container">
+    <div class="row">
+        <div class="col-md-4">
+            <img id="bookCover" src="" alt="图书封面" class="book-cover img-fluid">
+        </div>
+        <div class="col-md-8 book-info">
+            <h2 id="bookName"></h2>
+
+            <div class="book-info-item">
+                <i class="bi bi-person"></i>
+                <span class="text-muted">作者：</span>
+                <span id="bookAuthor" class="ms-1"></span>
+            </div>
+
+            <div class="book-info-item">
+                <i class="bi bi-tag"></i>
+                <span class="text-muted">分类：</span>
+                <span id="bookType" class="ms-1"></span>
+            </div>
+
+            <div class="book-info-item">
+                <i class="bi bi-bar-chart"></i>
+                <span class="text-muted">销量：</span>
+                <span id="bookSaleNum" class="ms-1"></span>
+            </div>
+
+            <div class="mt-3">
+                <p class="book-price">¥<span id="bookPrice"></span></p>
+            </div>
+
+            <div class="mt-2">
+                <span class="text-muted">库存：</span>
+                <span id="bookStock" class="ms-1"></span>
+                <span id="stockStatus" class="stock-status ms-2"></span>
+            </div>
+
+            <div class="buy-controls">
+                <div class="num-controls">
+                    <button class="num-btn" id="minusBtn">-</button>
+                    <input type="number" class="num-input" id="buyNum" value="1" min="1">
+                    <button class="num-btn" id="plusBtn">+</button>
+                </div>
+                <button class="btn btn-success" id="buyNowBtn">立即购买</button>
+                <button class="btn btn-primary" id="addCartBtn">加入购物车</button>
+            </div>
+
+            <div class="mt-5">
+                <h5><i class="bi bi-book-journal-whills"></i> 图书简介</h5>
+                <div class="mt-2 p-3 border rounded bg-light" id="bookIntro">
+                    加载中...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(function() {
+        // 1. 检查登录状态，更新导航栏
+        const userInfo = JSON.parse(sessionStorage.getItem("USER_INFO"));
+        if (userInfo) {
+            $("#notLoginMenu").hide();
+            $("#notLoginMenu2").hide();
+            $("#loginMenu").show();
+            $("#loginUserName").text(userInfo.login_name || userInfo.loginName);
+        } else {
+            // 未登录时隐藏个人中心链接
+            $(".navbar-nav .nav-item:has(.nav-link[href='myCenter.html'])").hide();
+        }
+
+        // 2. 退出登录
+        $("#logoutBtn").click(function() {
+            sessionStorage.removeItem("USER_INFO");
+            window.location.href = "index.html";
+        });
+
+        // 3. 获取URL中的bookId参数
+        const urlParams = new URLSearchParams(window.location.search);
+        const bookId = urlParams.get("bookId");
+        if (!bookId) {
+            alert("图书ID不存在，跳回首页");
+            window.location.href = "index.html";
+            return;
+        }
+
+        // 4. 加载图书详情
+        loadBookDetail(bookId);
+
+        // 5. 购买数量控制
+        const buyNumEl = $("#buyNum");
+        const minusBtn = $("#minusBtn");
+        const plusBtn = $("#plusBtn");
+        let maxStock = 1;
+
+        minusBtn.click(function() {
+            let num = parseInt(buyNumEl.val());
+            if (num > 1) {
+                buyNumEl.val(num - 1);
+            }
+        });
+
+        plusBtn.click(function() {
+            let num = parseInt(buyNumEl.val());
+            if (num < maxStock) {
+                buyNumEl.val(num + 1);
+            } else {
+                alert(`库存不足，最大可购买${maxStock}本`);
+            }
+        });
+
+        // 6. 立即购买
+        $("#buyNowBtn").click(function() {
+            if (!userInfo || !userInfo.user_id) {
+                alert("请先登录再购买");
+                window.location.href = "login.html";
+                return;
+            }
+
+            const buyNum = parseInt(buyNumEl.val());
+            const userId = userInfo.user_id;
+
+            // 检查库存
+            if (!checkStockBeforeAction("buy")) {
+                return;
+            }
+
+            if (buyNum > maxStock) {
+                alert(`库存不足，最大可购买${maxStock}本`);
+                return;
+            }
+
+            // 调用下单接口
+            $.post(`/user/createOrder?userId=${userId}&bookId=${bookId}&buyNum=${buyNum}`, function(res) {
+                if (res.code === 200) {
+                    if (confirm(`${res.msg}\n是否前往查看订单？`)) {
+                        window.location.href = "orderList.html";
+                    } else {
+                        window.location.href = "index.html";
+                    }
+                } else {
+                    alert(res.msg);
+                }
+            }).fail(function() {
+                alert("下单接口调用失败，请重试");
+            });
+        });
+
+        // 7. 加入购物车
+        $("#addCartBtn").click(function() {
+            if (!userInfo || !userInfo.user_id) {
+                alert("请先登录再加入购物车");
+                window.location.href = "login.html";
+                return;
+            }
+
+            // 检查库存
+            if (!checkStockBeforeAction("cart")) {
+                return;
+            }
+
+            const bookName = $("#bookName").text();
+            const bookPrice = $("#bookPrice").text();
+            const buyNum = parseInt(buyNumEl.val());
+
+            // 获取库存数量
+            let stockText = $("#bookStock").text();
+            let stockNum = 0;
+            if (stockText.includes('本')) {
+                stockNum = parseInt(stockText.replace('本', ''));
+            }
+
+            // 获取封面URL - 确保获取到的是真实URL
+            const coverUrl = $("#bookCover").attr("src");
+            console.log("封面URL:", coverUrl); // 调试用
+
+            const book = {
+                bookId: parseInt(bookId),
+                bookName: bookName,
+                price: parseFloat(bookPrice),
+                stock: stockNum,
+                num: buyNum,
+                coverUrl: coverUrl
+            };
+
+            // 保存到本地存储
+            let cart = JSON.parse(localStorage.getItem("USER_CART")) || [];
+            const existIndex = cart.findIndex(item => item.bookId === book.bookId);
+            if (existIndex > -1) {
+                // 重要：更新数量时也要更新封面URL！
+                cart[existIndex].num = book.num;
+                cart[existIndex].coverUrl = coverUrl; // 新增这行，更新封面URL
+            } else {
+                cart.push(book);
+            }
+            localStorage.setItem("USER_CART", JSON.stringify(cart));
+
+            console.log("当前购物车:", cart); // 调试用
+
+            alert(`《${bookName}》已加入购物车，数量：${buyNum}本`);
+        });
+
+        // 加载图书详情
+        function loadBookDetail(bookId) {
+            $.get(`/user/getBookById?bookId=${bookId}`, function(res) {
+                if (res.code === 200 && res.data) {
+                    const book = res.data;
+                    const bookData = book[0] || book; // 适配返回是数组的情况
+
+                    console.log("图书详情数据:", bookData); // 调试用
+
+                    // 修复字段映射 - 优先使用数据库字段名
+                    $("#bookName").text(bookData.book_name || bookData.bookName || "未知书名");
+                    $("#bookAuthor").text(bookData.author || "未知作者");
+
+                    // 修复分类字段 - 数据库可能是book_type
+                    $("#bookType").text(bookData.book_type || bookData.bookType || "未分类");
+
+                    // 修复销量字段 - 数据库可能是sale_num
+                    const saleNum = bookData.sale_num || bookData.saleNum || 0;
+                    $("#bookSaleNum").text(saleNum + "本");
+
+                    $("#bookPrice").text(bookData.price || 0);
+
+                    // 处理库存显示
+                    const stockNum = bookData.stock_num || bookData.stockNum || 0;
+                    maxStock = stockNum > 0 ? stockNum : 0;
+
+                    let stockText, stockClass;
+                    if (stockNum > 0) {
+                        stockText = stockNum + "本";
+                        stockClass = "stock-in";
+                        $("#stockStatus").text("有货").addClass(stockClass);
+                    } else if (stockNum === 0) {
+                        stockText = "无货";
+                        stockClass = "stock-out";
+                        $("#stockStatus").text("无货").addClass(stockClass);
+                        disableBuyButtons();
+                    } else if (stockNum === -1) {
+                        stockText = "已下架";
+                        stockClass = "stock-off";
+                        $("#stockStatus").text("已下架").addClass(stockClass);
+                        disableBuyButtons();
+                    } else {
+                        stockText = "库存异常";
+                        stockClass = "stock-out";
+                        $("#stockStatus").text("库存异常").addClass(stockClass);
+                        disableBuyButtons();
+                    }
+
+                    $("#bookStock").text(stockText);
+                    buyNumEl.attr("max", maxStock);
+
+                    // 优先使用后端返回的封面URL，如果没有则使用默认图片
+                    const coverUrl = bookData.cover_url || bookData.coverUrl;
+                    if (coverUrl && coverUrl.trim() !== '') {
+                        $("#bookCover").attr("src", coverUrl);
+                    } else {
+                        // 使用默认图片
+                        $("#bookCover").attr("src", `https://picsum.photos/id/${bookId}/300/400`);
+                    }
+
+                    // 生成图书简介
+                    const intro = generateBookIntroduction(bookData);
+                    $("#bookIntro").html(intro);
+                } else {
+                    alert(res.msg || "加载图书详情失败");
+                    window.location.href = "index.html";
+                }
+            }).fail(function() {
+                alert("加载图书详情失败，请检查后端接口");
+                window.location.href = "index.html";
+            });
+        }
+
+        // 生成图书简介
+        function generateBookIntroduction(book) {
+            const bookName = book.bookName || book.book_name || '该图书';
+            const author = book.author || '未知作者';
+            const bookType = book.bookType || book.book_type || '未分类';
+            const price = book.price || 0;
+            const stockNum = book.stockNum || book.stock_num || 0;
+            const saleNum = book.saleNum || book.sale_num || 0;
+
+            let intro = `<p><strong>《${bookName}》</strong>是${author}的作品，属于${bookType}类图书。</p>`;
+            intro += `<p><strong>定价：</strong>¥${price}</p>`;
+
+            if (saleNum > 0) {
+                intro += `<p><strong>销量：</strong>已售出${saleNum}本</p>`;
+            }
+
+            if (stockNum > 0) {
+                intro += `<p><strong>库存状态：</strong>有货（${stockNum}本）</p>`;
+            } else if (stockNum === 0) {
+                intro += `<p><strong>库存状态：</strong>暂时缺货</p>`;
+            } else if (stockNum === -1) {
+                intro += `<p><strong>库存状态：</strong>已下架</p>`;
+            }
+
+            intro += `<p class="mt-3 text-muted">如需更多图书详情，请咨询客服或查看其他读者评价。</p>`;
+
+            return intro;
+        }
+
+        // 检查库存
+        function checkStockBeforeAction(actionType) {
+            const stockNum = maxStock;
+
+            if (stockNum <= 0) {
+                alert("该图书已售罄或下架，无法" + (actionType === "buy" ? "购买" : "加入购物车"));
+                return false;
+            }
+
+            const buyNum = parseInt(buyNumEl.val());
+            if (buyNum > stockNum) {
+                alert(`库存不足，最大可购买${stockNum}本`);
+                return false;
+            }
+
+            return true;
+        }
+
+        // 禁用购买按钮
+        function disableBuyButtons() {
+            $("#buyNowBtn, #addCartBtn").prop("disabled", true)
+                .addClass("btn-secondary")
+                .removeClass("btn-success btn-primary");
+            $("#buyNowBtn").text("无法购买");
+            $("#addCartBtn").text("无法加入");
+        }
+    });
+</script>
+</body>
+</html>

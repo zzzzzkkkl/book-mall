@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>图书管理 - 管理员端</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.4/dist/jquery.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <style>
+    /* 原有样式保持不变 */
+    .form-group-custom {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .form-group-custom label {
+      margin-bottom: 0;
+      font-weight: 500;
+    }
+    .cover-preview {
+      width: 120px;
+      height: 160px;
+      object-fit: contain;
+      border: 1px solid #eee;
+      padding: 5px;
+      margin-top: 10px;
+    }
+
+    /* 新增：操作按钮组样式 */
+    .btn-action-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 140px;
+    }
+    .btn-action-group .btn {
+      font-size: 0.85rem;
+      padding: 4px 8px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-action-group .btn i {
+      margin-right: 5px;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+  <div class="container">
+    <a class="navbar-brand" href="#">在线图书销售系统</a>
+    <div class="navbar-nav">
+      <a class="nav-link active" href="/admin/bookManage.html">图书管理</a>
+      <a class="nav-link" href="/admin/userManage.html">用户管理</a>
+      <a class="nav-link" href="/admin/orderManage.html">订单管理</a>
+      <a class="nav-link" href="/admin/saleStat.html">销售榜</a>
+    </div>
+    <div class="navbar-nav ms-auto">
+      <span class="nav-link text-white" id="adminName">管理员</span>
+      <button class="btn btn-light ms-2" id="logoutBtn">退出登录</button>
+    </div>
+  </div>
+</nav>
+<div class="container mt-4">
+  <!-- 查询表单 -->
+  <div class="card mb-4 shadow-sm">
+    <div class="card-body">
+      <form id="bookQueryForm" class="row g-4 align-items-end">
+        <div class="col-md-2">
+          <div class="form-group-custom">
+            <label class="form-label">书号</label>
+            <input type="number" class="form-control" name="bookId" placeholder="输入书号">
+          </div>
+        </div>
+        <div class="col-md-2">
+          <div class="form-group-custom">
+            <label class="form-label">书名</label>
+            <input type="text" class="form-control" name="bookName" placeholder="输入书名">
+          </div>
+        </div>
+        <div class="col-md-2">
+          <div class="form-group-custom">
+            <label class="form-label">作者</label>
+            <input type="text" class="form-control" name="author" placeholder="输入作者">
+          </div>
+        </div>
+        <div class="col-md-2">
+          <div class="form-group-custom">
+            <label class="form-label">分类</label>
+            <input type="text" class="form-control" name="bookType" placeholder="输入分类">
+          </div>
+        </div>
+        <div class="col-md-2">
+          <div class="form-group-custom">
+            <label class="form-label">价格区间</label>
+            <div class="d-flex gap-2">
+              <input type="number" step="0.01" min="0" class="form-control flex-grow-1" name="minPrice" placeholder="最低">
+              <span class="align-self-center">~</span>
+              <input type="number" step="0.01" min="0" class="form-control flex-grow-1" name="maxPrice" placeholder="最高">
+            </div>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <button type="button" class="btn btn-primary w-100">查询</button>
+          <button type="button" class="btn btn-outline-secondary w-100 mt-2" id="resetQueryBtn">重置</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 功能按钮 -->
+  <div class="d-flex justify-content-between mb-4">
+    <div>
+      <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addBookModal">
+        <i class="bi bi-plus-circle"></i> 新增图书
+      </button>
+      <button type="button" class="btn btn-danger ms-2" id="checkStockAlert">
+        <i class="bi bi-exclamation-triangle"></i> 库存预警
+      </button>
+    </div>
+  </div>
+
+  <!-- 图书列表表格 -->
+  <div class="card shadow-sm">
+    <div class="card-header bg-light py-3">
+      <h5 class="mb-0">图书列表</h5>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-dark">
+          <tr>
+            <th>书号</th>
+            <th>书名</th>
+            <th>作者</th>
+            <th>价格</th>
+            <th>库存</th>
+            <th>分类</th>
+            <th>封面</th>
+            <th>操作</th>
+          </tr>
+          </thead>
+          <tbody id="bookTableBody">
+          <tr>
+            <td colspan="8" class="text-center text-muted py-3">请先登录后加载图书数据...</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 模态框区域 ========== -->
+
+<!-- 修改图书信息模态框（新增） -->
+<div class="modal fade" id="editBookModal" tabindex="-1" aria-labelledby="editBookModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title" id="editBookModalLabel">修改图书信息</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editBookForm">
+          <input type="hidden" name="bookId" id="editBookId">
+          <div class="mb-3">
+            <label class="form-label">书名 <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="bookName" id="editBookName" placeholder="请输入书名" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">作者 <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="author" id="editBookAuthor" placeholder="请输入作者" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">价格 <span class="text-danger">*</span></label>
+            <input type="number" step="0.01" min="0" class="form-control" name="price" id="editBookPrice" placeholder="请输入价格" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">分类 <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="bookType" id="editBookType" placeholder="请输入分类" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-info" id="submitEditBook">确认修改</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 封面上传模态框 -->
+<div class="modal fade" id="uploadCoverModal" tabindex="-1" aria-labelledby="uploadCoverModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="uploadCoverModalLabel">修改图书封面</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="uploadCoverForm">
+          <input type="hidden" id="coverBookId" name="bookId">
+          <div class="mb-3">
+            <label class="form-label">选择封面图片（支持PNG/JPG/JPEG）</label>
+            <input type="file" class="form-control" id="coverFile" name="coverFile" accept="image/png,image/jpg,image/jpeg" required>
+            <div class="form-text mt-1">图片建议尺寸：300px*400px，大小不超过5MB</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">封面预览</label>
+            <div id="coverPreviewContainer" class="d-flex align-items-center">
+              <img id="currentCoverPreview" class="cover-preview" src="" alt="当前封面" style="display: none;">
+              <span id="noCoverTip" class="text-muted">暂无封面</span>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-primary" id="submitCoverUpload">上传封面</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 新增图书模态框 -->
+<div class="modal fade" id="addBookModal" tabindex="-1" aria-labelledby="addBookModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title" id="addBookModalLabel">新增图书</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addBookForm">
+          <div class="mb-3">
+            <label class="form-label">书名 <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="bookName" placeholder="请输入书名" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">作者 <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="author" placeholder="请输入作者" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">价格 <span class="text-danger">*</span></label>
+            <input type="number" step="0.01" min="0" class="form-control" name="price" placeholder="请输入价格" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">库存 <span class="text-danger">*</span></label>
+            <input type="number" min="0" class="form-control" name="stockNum" placeholder="请输入库存数量" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">分类 <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="bookType" placeholder="请输入图书分类" required>
+          </div>
+          <input type="hidden" name="saleNum" value="0">
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-success" id="submitAddBook">提交</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 修改库存模态框 -->
+<div class="modal fade" id="updateStockModal" tabindex="-1" aria-labelledby="updateStockModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-white">
+        <h5 class="modal-title" id="updateStockModalLabel">修改库存</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="updateStockForm">
+          <input type="hidden" name="bookId" id="updateBid">
+          <div class="mb-3">
+            <label class="form-label">当前库存</label>
+            <input type="text" class="form-control" id="currentStock" readonly>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">新库存 <span class="text-danger">*</span></label>
+            <input type="number" min="0" class="form-control" name="newStock" placeholder="请输入新库存数量" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-warning" id="submitUpdateStock">确认修改</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 库存预警模态框 -->
+<div class="modal fade" id="stockAlertModal" tabindex="-1" aria-labelledby="stockAlertModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="stockAlertModalLabel">库存预警（≤5本）</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="stockAlertContent">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  $(function() {
+    checkLoginStatus();
+    $("#logoutBtn").click(() => window.location.href = "/admin/login.html");
+
+    // ========== 原有功能 ==========
+
+    // 图书查询
+    $("#bookQueryForm button.btn-primary").click(function() {
+      const formData = $("#bookQueryForm").serialize();
+      $.get("/admin/book/query?" + formData, function(books) {
+        renderBookTable(books);
+      }).fail(() => {
+        $("#bookTableBody").html('<tr><td colspan="8" class="text-center text-danger py-3">查询失败，请刷新页面</td></tr>');
+      });
+    });
+
+    // 重置查询
+    $("#resetQueryBtn").click(function() {
+      $("#bookQueryForm")[0].reset();
+      loadBookList();
+    });
+
+    // 新增图书
+    $("#submitAddBook").click(function() {
+      const formData = $("#addBookForm").serialize();
+      $.get("/admin/book/save?" + formData, function(res) {
+        if (res.includes("✅")) {
+          $("#addBookModal").modal("hide");
+          loadBookList();
+          $("#addBookForm")[0].reset();
+          alert(res);
+        } else {
+          alert("新增失败：" + res);
+        }
+      }).fail(() => alert("接口调用失败"));
+    });
+
+    // 修改库存
+    $(document).on("click", ".update-stock-btn", function() {
+      const bookId = $(this).data("bookid");
+      const currentStock = $(this).data("stock");
+      const bookName = $(this).data("bookname");
+      $("#updateBid").val(bookId);
+      $("#currentStock").val(currentStock);
+      $("#updateStockModalLabel").text("修改《" + bookName + "》库存");
+      $("#updateStockModal").modal("show");
+    });
+
+    // 提交库存修改
+    $("#submitUpdateStock").click(function() {
+      const formData = $("#updateStockForm").serialize();
+      $.get("/admin/stock/update?" + formData, function(res) {
+        if (res.includes("✅")) {
+          $("#updateStockModal").modal("hide");
+          loadBookList();
+          alert(res);
+        } else {
+          alert("修改失败：" + res);
+        }
+      }).fail(() => alert("接口调用失败"));
+    });
+
+    // 库存预警
+    $("#checkStockAlert").click(function() {
+      $.get("/admin/stock/alert", function(res) {
+        $("#stockAlertContent").text(res);
+        $("#stockAlertModal").modal("show");
+      }).fail(() => alert("接口调用失败"));
+    });
+
+    // 下架图书
+    $(document).on("click", ".remove-book-btn", function() {
+      const bookId = $(this).data("bookid");
+      if (confirm("确定下架这本书吗？")) {
+        $.get("/admin/book/remove?bookId=" + bookId, function(res) {
+          alert(res);
+          loadBookList();
+        }).fail(() => alert("接口调用失败"));
+      }
+    });
+
+    // ========== 封面上传功能 ==========
+
+    // 打开封面修改模态框
+    $(document).on("click", ".upload-cover-btn", function() {
+      const bookId = $(this).data("bookid");
+      const bookName = $(this).data("bookname");
+      const coverUrl = $(this).data("coverurl");
+
+      $("#coverBookId").val(bookId);
+      $("#uploadCoverModalLabel").text("修改《" + bookName + "》封面");
+
+      const $previewImg = $("#currentCoverPreview");
+      const $noCoverTip = $("#noCoverTip");
+      if (coverUrl && coverUrl.trim()) {
+        $previewImg.attr("src", coverUrl).show();
+        $noCoverTip.hide();
+      } else {
+        $previewImg.hide();
+        $noCoverTip.show();
+      }
+
+      const coverModal = new bootstrap.Modal(document.getElementById('uploadCoverModal'));
+      coverModal.show();
+    });
+
+    // 预览封面
+    $("#coverFile").change(function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          $("#currentCoverPreview").attr("src", event.target.result).show();
+          $("#noCoverTip").hide();
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // 提交封面上传
+    $("#submitCoverUpload").click(function() {
+      const bookId = $("#coverBookId").val();
+      const file = $("#coverFile")[0].files[0];
+
+      if (!bookId || !file) {
+        alert("请选择要上传的图片");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("bookId", bookId);
+      formData.append("coverFile", file);
+
+      $.ajax({
+        url: "/book/uploadCover",
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(res) {
+          if (res.success || res.code === 200) {
+            const coverModal = bootstrap.Modal.getInstance(document.getElementById('uploadCoverModal'));
+            coverModal.hide();
+            alert("封面上传成功！");
+            loadBookList();
+          } else {
+            alert("上传失败：" + (res.msg || "未知错误"));
+          }
+        },
+        error: function() {
+          alert("封面上传接口调用失败，请检查后端服务");
+        }
+      });
+    });
+
+    // ========== 新增：修改图书信息功能 ==========
+
+    // 打开修改图书信息模态框
+    $(document).on("click", ".edit-book-btn", function() {
+      const bookId = $(this).data("bookid");
+      const bookName = $(this).data("bookname");
+      const author = $(this).data("author");
+      const price = $(this).data("price");
+      const bookType = $(this).data("booktype");
+
+      // 填充表单数据
+      $("#editBookId").val(bookId);
+      $("#editBookName").val(bookName);
+      $("#editBookAuthor").val(author);
+      $("#editBookPrice").val(price);
+      $("#editBookType").val(bookType);
+
+      // 更新模态框标题
+      $("#editBookModalLabel").text("修改《" + bookName + "》信息");
+
+      // 打开模态框
+      const editModal = new bootstrap.Modal(document.getElementById('editBookModal'));
+      editModal.show();
+    });
+
+    // 提交图书信息修改
+    $("#submitEditBook").click(function() {
+      const formData = $("#editBookForm").serialize();
+
+      // 调用后端修改接口
+      $.ajax({
+        url: "/admin/book/update",
+        type: "POST",
+        data: formData,
+        success: function(res) {
+          if (res.success || res.code === 200) {
+            const editModal = bootstrap.Modal.getInstance(document.getElementById('editBookModal'));
+            editModal.hide();
+            alert("图书信息修改成功！");
+            loadBookList();
+          } else {
+            alert("修改失败：" + (res.msg || "未知错误"));
+          }
+        },
+        error: function() {
+          alert("修改接口调用失败，请检查后端服务");
+        }
+      });
+    });
+
+    // ========== 原有辅助函数 ==========
+
+    function checkLoginStatus() {
+      $.get("/admin/checkLogin", function(res) {
+        if (!res.success) {
+          window.location.href = "/admin/login.html";
+        } else {
+          loadBookList();
+        }
+      }).fail(() => {
+        alert("登录状态检查失败");
+        window.location.href = "/admin/login.html";
+      });
+    }
+
+    function loadBookList() {
+      $.get("/admin/book/list", function(books) {
+        renderBookTable(books);
+      }).fail(() => {
+        $("#bookTableBody").html('<tr><td colspan="8" class="text-center text-danger py-3">加载失败，请刷新页面</td></tr>');
+      });
+    }
+
+    // 修改表格渲染函数，添加编辑按钮
+    function renderBookTable(books) {
+      let html = "";
+      if (books && books.length > 0) {
+        books.forEach(book => {
+          const coverUrl = book.coverUrl || book.cover_url || "";
+          const coverImg = coverUrl ?
+                  `<img src="${coverUrl}" class="cover-preview" alt="图书封面">` :
+                  `<span class="text-muted">无封面</span>`;
+
+          html += '<tr>';
+          html += '<td>' + (book.bookId || '-') + '</td>';
+          html += '<td>' + (book.bookName || '-') + '</td>';
+          html += '<td>' + (book.author || '-') + '</td>';
+          html += '<td>¥' + (book.price || 0) + '</td>';
+          html += '<td>' + (book.stockNum || 0) + '</td>';
+          html += '<td>' + (book.bookType || '-') + '</td>';
+          html += '<td>' + coverImg + '</td>';
+
+          // 操作列 - 使用按钮组
+          html += '<td>';
+          html += '<div class="btn-action-group">';
+          html += '<button class="btn btn-info btn-sm edit-book-btn" data-bookid="' + book.bookId + '" data-bookname="' + book.bookName + '" data-author="' + (book.author || '') + '" data-price="' + (book.price || 0) + '" data-booktype="' + (book.bookType || '') + '">';
+          html += '<i class="bi bi-pencil"></i>修改信息';
+          html += '</button>';
+          html += '<button class="btn btn-warning btn-sm update-stock-btn" data-bookid="' + book.bookId + '" data-stock="' + book.stockNum + '" data-bookname="' + book.bookName + '">';
+          html += '<i class="bi bi-box-seam"></i>修改库存';
+          html += '</button>';
+          html += '<button class="btn btn-primary btn-sm upload-cover-btn" data-bookid="' + book.bookId + '" data-bookname="' + book.bookName + '" data-coverurl="' + coverUrl + '">';
+          html += '<i class="bi bi-image"></i>修改封面';
+          html += '</button>';
+          html += '<button class="btn btn-danger btn-sm remove-book-btn" data-bookid="' + book.bookId + '">';
+          html += '<i class="bi bi-trash"></i>下架图书';
+          html += '</button>';
+          html += '</div>';
+          html += '</td>';
+          html += '</tr>';
+        });
+      } else {
+        html = '<tr><td colspan="8" class="text-center text-muted py-3">暂无匹配的图书数据</td></tr>';
+      }
+      $("#bookTableBody").html(html);
+    }
+  });
+</script>
+</body>
+</html>

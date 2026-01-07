@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>搜索结果 - 在线图书销售系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.4/dist/jquery.min.js"></script>
+    <style>
+        .book-card { transition: transform 0.2s; cursor: pointer; }
+        .book-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="index.html">图书商城</a>
+        <a class="btn btn-outline-light btn-sm" href="index.html">返回首页</a>
+    </div>
+</nav>
+
+<div class="container">
+    <h3 class="mb-4">
+        <span class="text-muted">搜索结果：</span>
+        <span id="keywordDisplay" class="text-primary fw-bold"></span>
+    </h3>
+
+    <div id="resultList" class="row">
+        <div class="text-center py-5">正在搜索...</div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        // 1. 获取URL中的 keyword 参数
+        const params = new URLSearchParams(window.location.search);
+        const keyword = params.get('keyword');
+
+        if (!keyword) {
+            $("#resultList").html('<div class="alert alert-warning">未提供搜索关键词</div>');
+            return;
+        }
+
+        $("#keywordDisplay").text(keyword);
+
+        // 2. 调用后端搜索接口
+        $.ajax({
+            url: "/user/searchBook",
+            type: "GET",
+            data: { keyword: keyword },
+            success: function(res) {
+                // 根据ResultUtil结构判断
+                // 注意：如果后端返回的是直接的List，则不需要res.data。
+                // 根据之前的ResultUtil，应该是 res.code == 200 和 res.data
+
+                const list = res.data || res; // 兼容处理
+
+                if (list && list.length > 0) {
+                    renderBooks(list);
+                } else {
+                    $("#resultList").html('<div class="col-12 text-center text-muted py-5">没有找到相关图书</div>');
+                }
+            },
+            error: function() {
+                $("#resultList").html('<div class="alert alert-danger">搜索服务暂时不可用</div>');
+            }
+        });
+    });
+
+    function renderBooks(books) {
+        let html = "";
+        books.forEach(book => {
+            // 处理不同可能的字段名 (bid vs bookId, book_name vs bookName)
+            const id = book.bookId || book.bid;
+            const name = book.bookName || book.book_name;
+            const price = book.price;
+            const author = book.author;
+            const stock = book.stockNum !== undefined ? book.stockNum : book.stock_num;
+
+            html += `
+                <div class="col-md-3 col-sm-6 mb-4">
+                    <div class="card h-100 book-card" onclick="window.location.href='bookDetail.html?bookId=${id}'">
+                        <div class="card-body">
+                            <h5 class="card-title text-truncate" title="${name}">${name}</h5>
+                            <p class="card-text text-muted mb-1">作者：${author}</p>
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <span class="text-danger fw-bold fs-5">¥${price}</span>
+                                <span class="badge bg-${stock > 0 ? 'success' : 'secondary'}">
+                                    ${stock > 0 ? '有货' : '缺货'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        $("#resultList").html(html);
+    }
+</script>
+</body>
+</html>

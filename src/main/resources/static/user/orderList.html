@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>我的订单 - 在线图书销售系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.4/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        .order-container { margin-top: 30px; }
+        .order-card { margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-radius: 8px; }
+        .order-header { padding: 15px; background: #f8f9fa; border-bottom: 1px solid #eee; }
+        .order-body { padding: 15px; }
+        .empty-order { text-align: center; padding: 80px 0; color: #666; }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+        <a class="navbar-brand" href="index.html">
+            <i class="bi bi-book-half"></i> 在线图书销售系统
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item"><a class="nav-link" href="index.html">首页</a></li>
+                <li class="nav-item"><a class="nav-link active" href="orderList.html">我的订单</a></li>
+                <li class="nav-item"><a class="nav-link" href="cart.html">购物车</a></li>
+                <li class="nav-item"><a class="nav-link" href="myCenter.html">个人中心</a></li>
+            </ul>
+            <ul class="navbar-nav" id="userMenu">
+                <li class="nav-item dropdown" id="loginMenu" style="display: none;">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle"></i> <span id="loginUserName"></span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="myCenter.html">个人中心</a></li>
+                        <li><a class="dropdown-item" href="cart.html">购物车</a></li>
+                        <li><a class="dropdown-item text-danger" href="javascript:;" id="logoutBtn">退出登录</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item" id="notLoginMenu"><a class="nav-link" href="login.html">登录</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container order-container">
+    <h3><i class="bi bi-box-seam"></i> 我的订单</h3>
+    <hr>
+    <div id="emptyOrder" class="empty-order" style="display: none;">
+        <i class="bi bi-file-earmark-text" style="font-size: 60px; color: #ddd;"></i>
+        <h4>暂无订单记录</h4>
+        <p>快去首页下单吧~</p>
+        <button class="btn btn-primary mt-3" onclick="window.location.href='index.html'">去首页</button>
+    </div>
+    <div id="orderListContainer"></div>
+</div>
+
+<script>
+    $(function() {
+        // 1. 检查登录状态
+        const userInfo = JSON.parse(sessionStorage.getItem("USER_INFO"));
+        if (!userInfo || !userInfo.user_id) {
+            window.location.href = "login.html";
+            return;
+        }
+        const userId = userInfo.user_id;
+        const userName = userInfo.login_name || userInfo.loginName;
+
+        // 更新导航栏
+        $("#notLoginMenu").hide();
+        $("#loginMenu").show();
+        $("#loginUserName").text(userName);
+
+        // 2. 加载用户订单列表
+        loadOrderList(userId);
+
+        // 3. 退出登录
+        $("#logoutBtn").click(function() {
+            sessionStorage.removeItem("USER_INFO");
+            localStorage.removeItem("USER_CART");
+            window.location.href = "index.html";
+        });
+    });
+
+    // 加载订单列表
+    // 在 loadOrderList() 函数中修复
+    function loadOrderList(userId) {
+        $.get("/user/getMyOrder?userId=" + userId, function(res) {
+            const $container = $("#orderListContainer");
+            const $emptyOrder = $("#emptyOrder");
+
+            if (res.code !== 200 || (res.data === "暂无订单")) {
+                $emptyOrder.show();
+                $container.hide();
+                return;
+            }
+
+            $emptyOrder.hide();
+            $container.show();
+
+            let html = "";
+            if (res.data && res.data.length > 0) {
+                res.data.forEach(order => {
+                    // 修复时间格式化
+                    let saleTime = "-";
+                    if (order.sale_time || order.saleTime) {
+                        const timeStr = order.sale_time || order.saleTime;
+                        try {
+                            saleTime = new Date(timeStr).toLocaleString('zh-CN');
+                        } catch (e) {
+                            saleTime = timeStr;
+                        }
+                    }
+
+                    // 修复金额显示
+                    const totalPrice = order.sale_price || order.salePrice ? "¥" + (order.sale_price || order.salePrice) : "¥0.00";
+
+                    // 修复状态显示
+                    let statusText = "已完成";
+                    if (order.state === 1) {
+                        statusText = "待支付";
+                    } else if (order.state === 0) {
+                        statusText = "已取消";
+                    }
+
+                    html += `
+                    <div class="card order-card">
+                        <div class="order-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="fw-bold">订单编号：${order.order_id || order.orderId || "未知"}</span>
+                                <span class="ms-3 text-muted">下单时间：${saleTime}</span>
+                            </div>
+                            <span class="btn btn-sm btn-success">${statusText}</span>
+                        </div>
+                        <div class="order-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="text-muted">用户ID：${order.user_id || order.userId || "未知"}</span>
+                                    <span class="ms-3 text-primary fw-bold">总金额：${totalPrice}</span>
+                                </div>
+                                <button class="btn btn-primary btn-sm view-detail"
+                                        data-orderid="${order.order_id || order.orderId}">
+                                    <i class="bi bi-eye"></i> 查看详情
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                });
+            } else {
+                html = `<div class="text-center text-muted py-5">暂无订单数据</div>`;
+            }
+            $container.html(html);
+
+            // 绑定查看详情按钮事件
+            $(".view-detail").click(function() {
+                const orderId = $(this).data("orderid");
+                window.location.href = `orderDetail.html?orderId=${orderId}`;
+            });
+        }).fail(function() {
+            alert("加载订单失败，请检查后端服务");
+        });
+    }
+</script>
+</body>
+</html>

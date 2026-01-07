@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>销售榜 - 管理员端</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.4/dist/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+        <a class="navbar-brand" href="#">在线图书销售系统</a>
+        <div class="navbar-nav">
+            <a class="nav-link" href="/admin/bookManage.html">图书管理</a>
+            <a class="nav-link" href="/admin/userManage.html">用户管理</a>
+            <a class="nav-link" href="/admin/orderManage.html">订单管理</a>
+            <a class="nav-link active" href="/admin/saleStat.html">销售榜</a>
+        </div>
+        <div class="navbar-nav ms-auto">
+            <span class="nav-link text-white" id="adminName">管理员</span>
+            <button class="btn btn-light ms-2" id="logoutBtn">退出登录</button>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <!-- 销售统计筛选（优化：时间选择器+布局） -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <form id="saleStatForm" class="row g-4 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">开始时间</label>
+                    <!-- 改为datetime-local，支持选择时分秒 -->
+                    <input type="datetime-local" class="form-control" name="startTime" id="startTime">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">结束时间</label>
+                    <input type="datetime-local" class="form-control" name="endTime" id="endTime">
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-primary w-100" id="statSaleBtn">统计销量</button>
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-info w-100" id="exportReportBtn">导出报表</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 销售榜表格 -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-light py-3">
+            <h5 class="mb-0">图书销售榜</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-dark">
+                    <tr>
+                        <th>排名</th>
+                        <th>图书ID</th>
+                        <th>图书名称</th>
+                        <th>销售数量</th>
+                        <th>销售额</th>
+                    </tr>
+                    </thead>
+                    <tbody id="saleStatTableBody">
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-3">请选择时间后统计</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    $(function() {
+        // 检查登录状态
+        checkLoginStatus();
+
+        // 退出登录
+        $("#logoutBtn").click(() => window.location.href = "/admin/login.html");
+
+        // 【优化1】默认选中“当天时间范围”（自动补全时分秒）
+        const today = new Date();
+        // 当天00:00:00
+        const startOfDay = new Date(today.setHours(0, 0, 0, 0)).toISOString().slice(0, 16);
+        // 当天23:59:59
+        const endOfDay = new Date(today.setHours(23, 59, 59, 999)).toISOString().slice(0, 16);
+        $("#startTime").val(startOfDay);
+        $("#endTime").val(endOfDay);
+
+        // 【优化2】统计销量：时间格式转换为后端兼容的“yyyy-MM-dd HH:mm:ss”
+        $("#statSaleBtn").click(function() {
+            let startTime = $("#startTime").val();
+            let endTime = $("#endTime").val();
+
+            // 将datetime-local的“T”替换为空格，适配后端时间格式
+            startTime = startTime ? startTime.replace("T", " ") : "";
+            endTime = endTime ? endTime.replace("T", " ") : "";
+
+            $.get("/admin/sale/stat?startTime=" + startTime + "&endTime=" + endTime, function(res) {
+                if (res.code === 200 && res.data && res.data.length > 0) {
+                    let html = "";
+                    res.data.forEach((item, index) => {
+                        // 适配后端返回的字段（与AdminMapper中AS后的字段一致）
+                        const bookId = item.bookId || '-';
+                        const bookName = item.bookName || '-';
+                        const totalSale = item.totalSale || 0;
+                        // 销售额保留2位小数
+                        const totalRevenue = (item.totalRevenue || 0).toFixed(2);
+
+                        html += `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td>${bookId}</td>
+                                <td>${bookName}</td>
+                                <td>${totalSale}</td>
+                                <td>¥${totalRevenue}</td>
+                            </tr>
+                        `;
+                    });
+                    $("#saleStatTableBody").html(html);
+                } else {
+                    $("#saleStatTableBody").html(`<tr><td colspan="5" class="text-center text-muted py-3">暂无该时间范围的销售数据</td></tr>`);
+                }
+            }).fail((xhr) => {
+                alert(`统计失败：${xhr.responseText || '接口调用异常'}`);
+            });
+        });
+
+        // 【优化3】导出报表：同步时间筛选条件
+        $("#exportReportBtn").click(function() {
+            let startTime = $("#startTime").val();
+            let endTime = $("#endTime").val();
+            startTime = startTime ? startTime.replace("T", " ") : "";
+            endTime = endTime ? endTime.replace("T", " ") : "";
+
+            // 带时间参数请求导出接口
+            $.get("/admin/sale/export?startTime=" + startTime + "&endTime=" + endTime, function(res) {
+                if (res.code === 200 && res.data && res.data.length > 0) {
+                    // 生成CSV文件
+                    let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+                    csvContent += "排名,图书ID,图书名称,销售数量,销售额\n";
+
+                    res.data.forEach((item, index) => {
+                        const bookId = item.bookId || '-';
+                        const bookName = item.bookName || '-';
+                        const totalSale = item.totalSale || 0;
+                        const totalRevenue = (item.totalRevenue || 0).toFixed(2);
+
+                        csvContent += `${index + 1},${bookId},${bookName},${totalSale},${totalRevenue}\n`;
+                    });
+
+                    // 触发下载
+                    const encodedUri = encodeURI(csvContent);
+                    const link = document.createElement("a");
+                    link.href = encodedUri;
+                    link.download = `销售报表_${new Date().toLocaleDateString()}.csv`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    // 同步更新页面表格
+                    let html = "";
+                    res.data.forEach((item, index) => {
+                        const bookId = item.bookId || '-';
+                        const bookName = item.bookName || '-';
+                        const totalSale = item.totalSale || 0;
+                        const totalRevenue = (item.totalRevenue || 0).toFixed(2);
+
+                        html += `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td>${bookId}</td>
+                                <td>${bookName}</td>
+                                <td>${totalSale}</td>
+                                <td>¥${totalRevenue}</td>
+                            </tr>
+                        `;
+                    });
+                    $("#saleStatTableBody").html(html);
+                } else {
+                    alert("导出失败：" + (res.msg || "无数据可导出"));
+                }
+            }).fail((xhr) => {
+                alert(`导出失败：${xhr.responseText || '接口调用异常'}`);
+            });
+        });
+
+        // 检查登录状态
+        function checkLoginStatus() {
+            $.get("/admin/checkLogin", function(res) {
+                if (!res.success) {
+                    window.location.href = "/admin/login.html";
+                } else {
+                    if (res.adminName) {
+                        $("#adminName").text(res.adminName);
+                    }
+                }
+            }).fail(() => {
+                alert("登录状态检查失败");
+                window.location.href = "/admin/login.html";
+            });
+        }
+    });
+</script>
+</body>
+</html>
